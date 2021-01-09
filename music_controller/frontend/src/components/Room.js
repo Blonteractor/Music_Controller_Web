@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import CreateRoomPage from "./CreateRoomPage";
 import { Grid, Button, Typography } from "@material-ui/core";
+import MusicPlayer from "./MusicPlayer";
 
 export default class Room extends Component {
 	constructor(props) {
@@ -12,10 +13,12 @@ export default class Room extends Component {
 			isHost: false,
 			showSetting: false,
 			isSpotifyAuthenticated: false,
+			song: {},
 		};
 
 		this.roomCode = this.props.match.params.roomCode;
 		this.getRoomDetails();
+		this.getCurrentSong();
 	}
 
 	authenticateSpotify = () => {
@@ -51,7 +54,7 @@ export default class Room extends Component {
 				});
 				if (this.state.isHost) {
 					this.authenticateSpotify();
-			    }
+				}
 			});
 	};
 
@@ -112,6 +115,26 @@ export default class Room extends Component {
 		);
 	};
 
+	getCurrentSong = () => {
+		fetch("/spotify/current-song")
+			.then((response) => {
+				if (!response.ok) {
+					return {};
+				} else {
+					return response.json();
+				}
+			})
+			.then((data) => this.setState({ song: data }));
+	};
+
+	componentDidMount = () => {
+		this.interval = setInterval(this.getCurrentSong, 1000);
+	};
+
+	componentWillUnmount = () => {
+		clearInterval(this.interval);
+	};
+
 	render = () => {
 		if (this.state.showSetting) {
 			return this.renderSettings();
@@ -123,21 +146,7 @@ export default class Room extends Component {
 						Code: {this.roomCode}
 					</Typography>
 				</Grid>
-				<Grid item xs={12} align="center">
-					<Typography variant="h6" component="h6">
-						Votes: {this.state.votesToSkip}
-					</Typography>
-				</Grid>
-				<Grid item xs={12} align="center">
-					<Typography variant="h6" component="h6">
-						Guest Can Pause: {this.state.guestCanPause.toString()}
-					</Typography>
-				</Grid>
-				<Grid item xs={12} align="center">
-					<Typography variant="h6" component="h6">
-						Host: {this.state.isHost.toString()}
-					</Typography>
-				</Grid>
+				<MusicPlayer {...this.state.song} />
 				{this.state.isHost ? this.renderSettingsButton() : null}
 				<Grid item xs={12} align="center">
 					<Button
