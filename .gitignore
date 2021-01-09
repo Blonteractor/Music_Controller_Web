@@ -1,0 +1,7 @@
+webenv/
+.vscode/
+__pycache__/
+node_modules/
+migrations/
+.env
+db.sqlite3
