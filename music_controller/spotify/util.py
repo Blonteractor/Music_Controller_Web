@@ -68,12 +68,20 @@ def execute_spotify_api_request(session_key, endpoint, post_=False, put_=False):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {tokens.access_token}"}
     
     if post_:
-        post(BASE_URL + endpoint, headers=headers)
+        return post(BASE_URL + endpoint, headers=headers)
     elif put_:
-        put(BASE_URL + endpoint, headers=headers)
+        return put(BASE_URL + endpoint, headers=headers)
     else:
         try:
             response = get(BASE_URL + endpoint, {}, headers=headers)
             return response.json()
         except:
             return {"Error": "Issue with request"}
+        
+def play_song(session_key):
+    return execute_spotify_api_request(session_key=session_key, endpoint="player/play", put_=True)
+
+def pause_song(session_key):
+    print(f"Pausing song for {session_key}")
+    response = execute_spotify_api_request(session_key=session_key, endpoint="player/pause", put_=True)
+    print(response.json())
