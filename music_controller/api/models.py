@@ -24,3 +24,9 @@ class Room(models.Model):
     votes_to_skip = models.IntegerField(null=False, default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     last_update_at = models.DateTimeField(auto_now=True)
+    
+class Message(models.Model):
+    content = models.CharField(max_length=100, null=False)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    room = models.CharField(max_length=8, null=False)
+    sent_by = models.CharField(max_length=50, null=False)

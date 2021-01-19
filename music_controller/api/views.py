@@ -3,8 +3,8 @@ from django.http.response import JsonResponse
 from rest_framework import generics, serializers, status
 from django.shortcuts import render
 from rest_framework.request import Request
-from .models import Room
-from .serializers import RoomSerializer, CreateRoomSerializer, UpdateRoomSerializer
+from .models import Message, Room
+from .serializers import CreateMessageSerializer, MessageSerializer, RoomSerializer, CreateRoomSerializer, UpdateRoomSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -143,3 +143,50 @@ class UpdateRoom(APIView):
             
         else:
             return Response({"Bad Request": "Bad data"}, status=status.HTTP_400_BAD_REQUEST)
+        
+class SendMessage(APIView):
+    serializer_class = CreateMessageSerializer
+    
+    def post(self, request, formats=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+            
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            message_content = serializer.data.get("content")
+            room_code = self.request.session.get("room_code")
+            
+            if room_code is None:
+                return Response({"message": "User not in a room"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            queryset = Room.objects.filter(code=room_code)
+            if not queryset.exists():
+                return Response({"Message": f"Room {room_code} doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+            
+            if len(message_content) > 100:
+                return Response({"Request too large": "Message too big, only messages of length < 100 are accepted"}, status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+            
+            message = Message(sent_by=self.request.session.session_key, content=message_content, room=room_code)
+            message.save()
+            
+            return Response({"message": "Message Created successfully"}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"Bad Request": "Bad data"}, status=status.HTTP_400_BAD_REQUEST)
+        
+class GetMessages(APIView):
+    serializer_class = MessageSerializer
+    
+    def get(self, request, format=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+            
+        room_code = self.request.session.get("room_code", default=None)
+        
+        if room_code is None:
+            return Response({"message": "User not in room"}, status=status.HTTP_404_NOT_FOUND)
+        
+        queryset = list(Message.objects.all().filter(room=room_code))
+        data = map(lambda message: self.serializer_class(message).data, queryset)
+        
+        return Response({"data": data}, status=status.HTTP_200_OK)
+    
