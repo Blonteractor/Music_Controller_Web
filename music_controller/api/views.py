@@ -169,7 +169,7 @@ class SendMessage(APIView):
             message = Message(sent_by=self.request.session.session_key, content=message_content, room=room_code)
             message.save()
             
-            return Response({"message": "Message Created successfully"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Message Created successfully", "data": MessageSerializer(message).data}, status=status.HTTP_201_CREATED)
         else:
             return Response({"Bad Request": "Bad data"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -187,6 +187,23 @@ class GetMessages(APIView):
         
         queryset = list(Message.objects.all().filter(room=room_code))
         data = map(lambda message: self.serializer_class(message).data, queryset)
+        
+        return Response({"data": data}, status=status.HTTP_200_OK)
+    
+class GetLatestMessage(APIView):
+    serializer_class = MessageSerializer
+    
+    def get(self, request, format=None):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+            
+        room_code = self.request.session.get("room_code", default=None)
+        
+        if room_code is None:
+            return Response({"message": "User not in room"}, status=status.HTTP_404_NOT_FOUND)
+        
+        queryset = Message.objects.filter(room=room_code).order_by("-sent_at")
+        data = self.serializer_class(queryset.first()).data
         
         return Response({"data": data}, status=status.HTTP_200_OK)
     
